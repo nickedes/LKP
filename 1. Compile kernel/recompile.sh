@@ -1,6 +1,9 @@
 # Steps to only recompile the kernel, modules will not be installed again!
 # Make suitable changes to kernel code in fs/open.c
 
+# Goto kernel source directory
+cd ~/Downloads/linux-4.12.4/;
+
 # create the linux kernel image file
 make bzImage;
 
