@@ -8,4 +8,4 @@
 
 	Takes an integer parameter and prints "positive", "negative" or "zero" depending on its value.
 
-Refer [#2](../issues/2) for Commands.
+Refer [#2](https://github.com/nickedes/LKP/issues/2) for Commands.
