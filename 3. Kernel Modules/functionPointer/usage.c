@@ -1,18 +1,24 @@
 #include <linux/kernel.h>	
 #include <linux/module.h>	
 #include <linux/init.h>		
+#include <linux/sched.h>
+#include <linux/fs_struct.h>
+#include <linux/fs.h>
 
 extern void * fn;	
 
-static char* text = "a";
+static char* text = "/home";
 module_param(text, charp, 0);
 
-// modify this any no. of times
 void parse(char *p)
 {
-	if (strstr(p,text) != NULL )
+	struct dentry *entry = current->fs->pwd.dentry;
+	char *y;
+	char buf[256];
+	y = dentry_path_raw(entry, buf, 256);
+	if(strstr(y, text) != NULL)
 	{
-		printk("file - %s opened", p);
+		printk("opened file %s", p);
 	}
 }
 
