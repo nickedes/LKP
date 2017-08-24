@@ -11,7 +11,7 @@ void handler(int signal)
 }
 
 int main()
-{	
+{
 	if(signal(SIGFPE, handler) == SIG_ERR)
 	{
 		printf("%s\n", "not handled");
