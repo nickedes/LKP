@@ -20,8 +20,8 @@ static struct token
 
 main()
 {
-    int fd = open("/dev/demo3",O_RDWR), retval, x, key, i, ctr=0;
-    char read_buf[100], *write_buf, data[100], ch, handle[100], message[1000];
+    int fd = open("/dev/demo3",O_RDWR), retval, x, ch, key, i, ctr=0;
+    char read_buf[100], *write_buf, data[100], handle[100], message[1000];
     unsigned login;
 
     if(fd < 0){
@@ -64,21 +64,20 @@ main()
     // malloc space for input message struct
     struct info *m = malloc(sizeof(*m));
 
-    printf("enter operation: r- read, w -write, l - check login,c - close\n");
-    scanf("%c", &ch);
+    printf("Input your choice: 1 - read, 2 -write, 3 - check login,4 - close\n");
+    scanf("%d", &ch);
 
-    while(ch != 'c')
+    while(ch != 4)
     {
         switch(ch)
         {
-        case 'r':
+        case 1:
             x = read(fd, read_buf, 1000);
             printf("%s\n", read_buf);
             break;
-        case 'w':
+        case 2:
             printf("Enter message : ");
             scanf("%s", data);
-            printf("%s\n", data);
 
             for(i = 0; i < strlen(data); i++)
               if(data[i] == ',')
@@ -102,14 +101,14 @@ main()
             write_buf = (char *)m;
             write(fd, write_buf, sizeof(write_buf));
             break;
-        case 'l':
+        case 3:
             // get all logged in handles
             x = ioctl(fd, CHECK_LOGIN, message);
             printf("%s\n", message);
             break;
         }
-        printf("enter operation: r- read, w -write, l - check login, c - close\n");
-        scanf("%c", &ch);
+        printf("Input your choice: 1 - read, 2 -write, 3 - check login,4 - close\n");
+        scanf("%d", &ch);
     }
 
     if(ioctl(fd, IOCTL_LOGOUT_PROCESS) < 0) {

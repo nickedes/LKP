@@ -14,8 +14,8 @@ struct info
 
 main()
 {
-    int fd = open("/dev/demo2",O_RDWR), x, i, ctr=0;
-    char read_buf[100], *write_buf, data[100], ch, handle[100], message[1000], receiver[100];
+    int fd = open("/dev/demo2",O_RDWR), x, retval, i, ch, ctr=0;
+    char read_buf[100], *write_buf, data[100], handle[100], message[1000], receiver[100];
     unsigned login;
     if(fd < 0){
        perror("open");

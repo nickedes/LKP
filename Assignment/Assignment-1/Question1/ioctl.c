@@ -6,7 +6,7 @@
 
 main()
 {
-    int fd = open("/dev/demo1",O_RDWR), retval;
+    int fd = open("/dev/demo1",O_RDWR), retval, choice;
     char read_buf[100], write_buf[100], ch, handle[100], message[1000];
     unsigned login;
     if(fd < 0){
@@ -30,20 +30,20 @@ main()
         perror("ioctl");
     }
 
-    printf("enter operation: r- read, w -write, c - close\n");
-    scanf("%c", &ch);
+    printf("Input your choice: 1- read, 2 -write, 3 - close\n");
+    scanf("%d", &choice);
 
     do
     {
-        switch(ch)
+        switch(choice)
         {
-            case 'r':
+            case 1:
                 retval = read(fd, read_buf, 1000);
                 // print the read material
                 printf("%s\n", read_buf);
                 break;
-            case 'w':
-                printf("enter data :");
+            case 2:
+                printf("Enter message :");
                 scanf("%s", write_buf);
                 write(fd, write_buf, sizeof(write_buf));
                 break;
@@ -51,9 +51,9 @@ main()
                 // printf("Operation not supported!\n");
                 break;
         }
-        printf("enter operation: r- read, w -write, c - close\n");
-        scanf("%c", &ch);
-    }while(ch != 'c');
+        printf("Input your choice: 1 - read, 2 - write, 3 - close\n");
+        scanf("%d", &choice);
+    }while(choice != 3);
 
     if(ioctl(fd, IOCTL_LOGOUT_PROCESS) < 0) {
         perror("ioctl");

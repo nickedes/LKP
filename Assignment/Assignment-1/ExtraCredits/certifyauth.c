@@ -24,8 +24,8 @@ int keygen()
 
 main()
 {
-    int fd = open("/dev/demo3",O_RDWR), i, flag;
-    char handle[100], *usertoken, ch;
+    int fd = open("/dev/demo3",O_RDWR), i, flag, ch;
+    char handle[100], *usertoken;
     struct token *pair;
     if(fd < 0){
         perror("open");
@@ -36,14 +36,14 @@ main()
         perror("ioctl");
     }
 
-    printf("enter operation: g - Get Key, c - close\n");
-    scanf("%c", &ch);
+    printf("Enter operation: 1 - Get Key, 2 - close\n");
+    scanf("%d", &ch);
 
-    while(ch != 'c')
+    while(ch != 2)
     {
         switch(ch)
         {
-            case 'g':
+            case 1:
                 printf("Enter Handle of process: ");
                 scanf("%s", handle);
                 flag = 0;
@@ -70,12 +70,13 @@ main()
                 {
                     perror("ioctl");
                 }
-                printf("Key generated is : %d. Use this while logging in chatroom.\n", pair->key);
+                printf("Key generated is : %d . Use this while logging in chatroom.\n", pair->key);
                 break;
-
+            default:
+                break;
         }
-        printf("enter operation: g - Get Key, c - close\n");
-        scanf("%c", &ch);
+        printf("Enter operation: 1 - Get Key, 2 - close\n");
+        scanf("%d", &ch);
     }
     
     close(fd);

@@ -275,13 +275,19 @@ static long demo_ioctl(struct file *file,
                 retval = 1;
                 break;
             }
+
+            // flag - used to check if a handle has a key or not
+            flag = 0;
             for (i = 0; i < token_index; ++i)
             {
                 if(strcmp(tokens[i].handle, usertoken->handle) == 0)
+                {
+                    // this handle has a key!
+                    flag = 1;
                     break;
+                }
             }
-            printk("key - %d, user key - %d, bool - %d", tokens[i].key, usertoken->key,  (tokens[i].key == usertoken->key));
-            if(tokens[i].key != usertoken->key)
+            if(!flag || tokens[i].key != usertoken->key)
             {
                 // invalid KEY!! Cant login
                 retval = -1;
