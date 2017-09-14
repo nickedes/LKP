@@ -38,18 +38,18 @@ main()
         perror("ioctl");
     }
 
-    printf("enter operation: r- read, w -write, l - check login,c - close\n");
-    scanf("%c", &ch);
+    printf("Input your choice: 1 - read, 2 -write, 3 - check login,4 - close\n");
+    scanf("%d", &ch);
     struct info *m = malloc(sizeof(*m));
-    while(ch != 'c')
+    while(ch != 4)
     {
         switch(ch)
         {
-            case 'r':
+            case 1:
                 x = read(fd, read_buf, 1000);
                 printf("%s\n", read_buf);
                 break;
-            case 'w':
+            case 2:
                 printf("Enter message : ");
                 scanf("%s", data);
                 for(i = 0; i < strlen(data); i++)
@@ -73,13 +73,13 @@ main()
                 write_buf = (char *)m;
                 write(fd, write_buf, sizeof(write_buf));
                 break;
-            case 'l':
+            case 3:
                 x = ioctl(fd, CHECK_LOGIN, message);
                 printf("%s\n", message);
                 break;
         }
-        printf("enter operation: r- read, w -write, l - check login, c - close\n");
-        scanf("%c", &ch);
+        printf("Input your choice: 1 - read, 2 -write, 3 - check login,4 - close\n");
+        scanf("%d", &ch);
     }
 
     if(ioctl(fd, IOCTL_LOGOUT_PROCESS) < 0) {
