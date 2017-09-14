@@ -1,17 +1,10 @@
-#include<linux/module.h>
-#include<linux/kernel.h>
-#include<linux/mm_types.h>
-#include<linux/file.h>
-#include<linux/fs.h>
-#include<linux/path.h>
-#include<linux/dcache.h>
-#include<linux/sched.h>
-#include<linux/time.h>
-#include<linux/fs_struct.h>
+#include <linux/module.h>
+#include <linux/kernel.h>
+#include <linux/fs.h>
+#include <linux/time.h>
 #include <linux/uaccess.h>
-#include<linux/string.h>
-#include <linux/semaphore.h>
 #include "syschar.h"
+
 #define MAX_BUF_SIZE 8192
 #define DEVNAME "demo3"
 #define MAXPROC 4
@@ -19,38 +12,51 @@
 #define MAX_MAP 1000
 #define MAX_MSG 1000
 #define MAX_LOGIN 1000
+
+// TOKEN For certifying the certifying authority
 #define CERTIFY_AUTH_TOKEN 17111056
+
 int get_EmptyMapSlot(void);
 int get_EmptyMsgSlot(void);
+
 static int major;
 atomic_t  device_opened;
 static unsigned buf_size;
 static unsigned current_usage = 0;
-static short readpos=0;
 static int total_write = 0;
 
+// mapping of message with its receiver process
 static struct map {
     int pid;
     int msg_id;
+    // flag - whether msg read or not
     int flag;
+    // delete - 1 means deleted (or empty msg), 0 means in use!
     int delete;
 }maps[MAX_MAP];
 
+// generated keys for each handle is stored
 static struct token
 {
     char handle[100];
     int key;
 }tokens[100];
 
+// Message information
 static struct mesg
 {
-    int pid; // sender
+    // sender process
+    int pid;
+    // timestamp
     unsigned int time;
     char message[100];
+    // no. of process which read this message
     int num_reads;
+    // delete - 1 means deleted (or empty msg), 0 means in use!
     int delete;
 }msgs[MAX_MSG];
 
+// format of a write message includes these three, this struct is used in conversion of ioctl params passed and access user input
 struct info
 {
     char sender[100];
@@ -58,6 +64,7 @@ struct info
     char message[100];
 };
 
+// Login information of all processes with pid and handle.
 static struct login{
     int pid;
     unsigned int time;
@@ -71,22 +78,16 @@ static int logstore[10000] = {0};
 static int msg_index = 0;
 static int map_index = 0;
 
+// When device is opened
 static int demo_open(struct inode *inode, struct file *file)
 {
-    int i;
-    for (i = 0; i < MAX_MSG; ++i)
-    {
-        if(msgs[i].pid != 0 && msgs[i].num_reads == 0 && msgs[i].delete == 1)
-        {
-            printk("deleted msg : %s", msgs[i].message);
-        }
-    }
     atomic_inc(&device_opened);
     try_module_get(THIS_MODULE);
     printk(KERN_INFO "Device opened successfully\n");
     return 0;
 }
 
+// when device is closed
 static int demo_release(struct inode *inode, struct file *file)
 {
         atomic_dec(&device_opened);
@@ -96,6 +97,7 @@ static int demo_release(struct inode *inode, struct file *file)
         return 0;
 }
 
+// a read function for reading all handles of logged processes into buffer.
 static ssize_t device_read(struct file *filp,
                            char *buffer,
                            size_t length,
@@ -114,6 +116,7 @@ static ssize_t device_read(struct file *filp,
     return retval;  
 }
 
+// when device is read
 static ssize_t demo_read(struct file *filp,
                            char *buffer,
                            size_t length,
@@ -141,15 +144,18 @@ static ssize_t demo_read(struct file *filp,
 
             // marked as read!
             maps[i].flag = 0;
+            // decrement no. of reads
             msgs[msgId].num_reads--;
         }
     }
-    // printk("string read - %s", send_msg_handle);
+
+    // copy to user space buffer!
     retval = copy_to_user(buffer, send_msg_handle, length);
 
     // deletion of message
     for (i = 0; i < MAX_MSG; i++)
     {
+        // no. of reads reduced to 0, hence invalidate the message!
         if (msgs[i].num_reads == 0)
         {
             msgs[i].delete = 1;
@@ -164,70 +170,26 @@ static ssize_t demo_read(struct file *filp,
     return retval;
 }
 
-/*
 static ssize_t
 demo_write(struct file *filp, const char *buff, size_t len, loff_t * off)
 {
-    int ret, i;
-    struct timeval now;
-    unsigned int temp;
-    printk(KERN_INFO "Trying to support write....\n");        
-    msg_index = get_EmptyMsgSlot();
-    //printk(KERN_INFO "Sorry, this operation isn't supported.\n");
-    
-    memset(msgs[msg_index].message , 0, 100);
-    current_usage -= len;
-    readpos=0;
-    do_gettimeofday(&now);
-    temp = now.tv_sec;
-    msgs[msg_index].pid = current->pid;
-    msgs[msg_index].time = temp;
-    ret = copy_from_user(msgs[msg_index].message, buff, len);
-    msgs[msg_index].num_reads = 0;
-    msgs[msg_index].delete = 0;
-    // get no. of readers
-    for (i = 0; i < login_index; ++i)
-    {
-        if(logins[i].time < msgs[msg_index].time && logins[i].pid != msgs[msg_index].pid)
-        {
-            // increment readers!
-            msgs[msg_index].num_reads = msgs[msg_index].num_reads + 1;
-
-            map_index = get_EmptyMapSlot();
-            maps[map_index].pid = logins[i].pid;
-            maps[map_index].msg_id = msg_index;
-            // set flag for reading
-            maps[map_index].flag = 1;
-            maps[map_index].delete = 0;
-        }
-    }
-
-    if (ret == 0)
-    {
-    total_write += len;
-    return len;
-    }
-    return ret;
-}
-*/
-
-static ssize_t
-demo_write(struct file *filp, const char *buff, size_t len, loff_t * off)
-{
+    // cast char * buffer into struct info
     struct info *j = (struct info *)buff;
     int ret, i;
     struct timeval now;
     unsigned int temp;
     printk(KERN_INFO "Trying to support write....\n");
+    // get free slot for message!
     msg_index = get_EmptyMsgSlot();
-    //printk(KERN_INFO "Sorry, this operation isn't supported.\n");
     memset(msgs[msg_index].message , 0, 100);
     current_usage -= len;
-    readpos=0;
+    // get timestamp
     do_gettimeofday(&now);
     temp = now.tv_sec;
+
     msgs[msg_index].pid = current->pid;
     msgs[msg_index].time = temp;
+    // copy message from user space
     ret = copy_from_user(msgs[msg_index].message, j->message, len);
     msgs[msg_index].num_reads = 0;
     msgs[msg_index].delete = 0;
@@ -283,6 +245,7 @@ static long demo_ioctl(struct file *file,
 
 {
     int retval = -EINVAL, temp, i, auth_token;
+    // preset timestamp
     struct token *usertoken;
     struct timeval now;
     unsigned int timestamp;
@@ -300,42 +263,49 @@ static long demo_ioctl(struct file *file,
                 // invalid KEY!! Cant login
                 return -1; 
             }
+            // create loginifr process, in case not created
             do_gettimeofday(&now);
             timestamp = now.tv_sec;
             memset(logins[login_index].handle, 0, 100);
             logins[login_index].pid = current->pid;
             logins[login_index].time = timestamp;
             retval = copy_from_user(logins[login_index].handle, usertoken->handle, strlen(usertoken->handle));
+            // store pid for index!
             logstore[current->pid] = login_index;
             printk("Login successfully");
             login_index++;
             retval = 0;
             break;
       case IOCTL_LOGOUT:
+            // get index for process
             temp = logstore[current->pid];
+            // delete entry!
             for (i = temp; i < login_index; ++i)
             {
                 logins[i] = logins[i+1];
                 logstore[ logins[i].pid ] = i;
             }
+            // reset the entry in logstore
             logstore[current->pid] = 0;
             printk("logout successfully");
             login_index--;
             retval = 0;
             break;
         case CHECK_LOGIN:
+            // get handles of all logged process
             retval = device_read(file, (char *)arg, 1000, 0);
             put_user('\0', (char *)arg + strlen((char *)arg));
             break;
         case LOGIN_CA:
+            // autheticate certifying authority
             auth_token = (unsigned int)arg;
             // When the process is certifying authority, then allow
             if (auth_token == CERTIFY_AUTH_TOKEN)
                 retval = 0;
             break;
         case IOCTL_SETPAIR:
+            // ioctl for setting handle and key with all tokens
             usertoken = (struct token *)arg;
-            printk("handle - %s,key - %d",usertoken->handle, usertoken->key);
             retval = copy_from_user(tokens[token_index].handle, usertoken->handle, strlen(usertoken->handle));
             tokens[token_index].key = usertoken->key;
             token_index++;
@@ -439,6 +409,7 @@ void cleanup_module(void)
 
 int get_EmptyMapSlot(void)
 {
+    // get next free slot for msg, i.e. which is either deleted or free!
     int i;
     for(i = 0; i < MAX_MAP; ++i)
     {
@@ -450,6 +421,7 @@ int get_EmptyMapSlot(void)
 
 int get_EmptyMsgSlot(void)
 {
+    // get next free slot for map, i.e. which is either deleted or free!
     int i;
     for(i = 0; i < MAX_MSG; ++i)
     {
@@ -458,7 +430,6 @@ int get_EmptyMsgSlot(void)
     }
     return i;
 }
-
 
 MODULE_AUTHOR("nickedes@cse.iitk.ac.in");
 MODULE_LICENSE("GPL");

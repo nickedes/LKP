@@ -1,8 +1,7 @@
-#include<linux/module.h>
-#include<linux/kernel.h>
-
-#include<linux/fs.h>
-#include<linux/time.h>
+#include <linux/module.h>
+#include <linux/kernel.h>
+#include <linux/fs.h>
+#include <linux/time.h>
 #include <linux/uaccess.h>
 #include "syschar.h"
 
@@ -28,20 +27,25 @@ static struct map {
     int msg_id;
     // flag - whether msg read or not
     int flag;
-    // delete - 1 means deleted (or empty msg), 0 means in use!
+    // delete - 1 means deleted (or empty map), 0 means in use!
     int delete;
 }maps[MAX_MAP];
 
+// Message information
 static struct mesg
 {
-    int pid; // sender
+    // sender process
+    int pid;
+    // timestamp
     unsigned int time;
     char message[100];
+    // no. of process which read this message
     int num_reads;
+    // delete - 1 means deleted (or empty msg), 0 means in use!
     int delete;
 }msgs[MAX_MSG];
 
-
+// Login information of all processes with pid and handle.
 static struct login{
     int pid;
     unsigned int time;

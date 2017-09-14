@@ -1,11 +1,12 @@
-#include<stdio.h>
-#include<stdlib.h>
-#include<sys/fcntl.h>
-#include<sys/ioctl.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/fcntl.h>
+#include <sys/ioctl.h>
 #include "syschar.h"
 #include <string.h>
 #include <time.h>
 
+// maintain all handles and generated keys
 static struct token
 {
     char handle[100];
@@ -14,6 +15,7 @@ static struct token
 
 static int token_index = 0;
 
+// a random key generation function
 int keygen()
 {
     srand(time(NULL));
@@ -29,21 +31,18 @@ main()
         perror("open");
         exit(-1);
     }
+    // My Roll no. is used for verifying Certificate authority
     if(ioctl(fd, LOGIN_CA, 17111056) < 0) {
         perror("ioctl");
     }
 
-    printf("enter operation: g - Get Key, r - revoke key, c - close\n");
+    printf("enter operation: g - Get Key, c - close\n");
     scanf("%c", &ch);
 
     while(ch != 'c')
     {
         switch(ch)
         {
-            case 'r':
-
-                break;
-
             case 'g':
                 printf("Enter Handle of process: ");
                 scanf("%s", handle);
@@ -52,7 +51,7 @@ main()
                 {
                     if(strcmp(tokens[i].handle, handle) == 0)
                     {
-                        printf("Key generated is : %d.Use this while logging in chatroom.\n", tokens[i].key);
+                        printf("Key generated is : %d. Use this while logging in chatroom.\n", tokens[i].key);
                         flag = 1;
                         break;
                     }
@@ -71,11 +70,11 @@ main()
                 {
                     perror("ioctl");
                 }
-                printf("Key generated is : %d.Use this while logging in chatroom.\n", pair->key);
+                printf("Key generated is : %d. Use this while logging in chatroom.\n", pair->key);
                 break;
 
         }
-        printf("enter operation: g - Get Key, r - revoke key, c - close\n");
+        printf("enter operation: g - Get Key, c - close\n");
         scanf("%c", &ch);
     }
     
