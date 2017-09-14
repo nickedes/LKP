@@ -6,7 +6,7 @@
 
 main()
 {
-    int fd = open("/dev/demo1",O_RDWR), x;
+    int fd = open("/dev/demo1",O_RDWR), retval;
     char read_buf[100], write_buf[100], ch, handle[100], message[1000];
     unsigned login;
     if(fd < 0){
@@ -18,7 +18,15 @@ main()
     scanf("%s", handle);
 
     // Login ioctl call!
-    if(ioctl(fd, IOCTL_LOGIN, handle) < 0) {
+    retval = ioctl(fd, IOCTL_LOGIN_PROCESS, handle);
+    if(retval == -1)
+    {
+        printf("Entered Handle is not unique.Try again\n");
+        close(fd);
+        return;
+    }
+    else if(retval < 0)
+    {
         perror("ioctl");
     }
 
@@ -30,12 +38,12 @@ main()
         switch(ch)
         {
             case 'r':
-                x = read(fd, read_buf, 1000);
+                retval = read(fd, read_buf, 1000);
                 // print the read material
                 printf("%s\n", read_buf);
                 break;
             case 'w':
-                printf("enter data: ");
+                printf("enter data :");
                 scanf("%s", write_buf);
                 write(fd, write_buf, sizeof(write_buf));
                 break;
@@ -47,7 +55,7 @@ main()
         scanf("%c", &ch);
     }while(ch != 'c');
 
-    if(ioctl(fd, IOCTL_LOGOUT) < 0) {
+    if(ioctl(fd, IOCTL_LOGOUT_PROCESS) < 0) {
         perror("ioctl");
     }
     close(fd);

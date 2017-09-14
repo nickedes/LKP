@@ -112,7 +112,10 @@ static ssize_t demo_read(struct file *filp,
             // sending process
             sender = msgs[msgId].pid;
             
-            // combine handle + msg
+            // combine [timestamp] handle : msg
+            strcat(send_msg_handle, "[");
+            sprintf(send_msg_handle, "%s%d", send_msg_handle, msgs[msgId].time);
+            strcat(send_msg_handle, "] ");
             strcat(send_msg_handle, logins[ logstore[sender] ].handle);
             strcat(send_msg_handle, " :");
             strcat(send_msg_handle, msgs[msgId].message);
@@ -214,11 +217,30 @@ static long demo_ioctl(struct file *file,
  unsigned long arg)
 
 {
-    int retval = -EINVAL, temp, i;
+    int retval = -EINVAL, temp, i, flag = 0;
+    char handle[100];
     struct timeval now;
     unsigned int timestamp;
     switch(ioctl_num){
-      case IOCTL_LOGIN:
+      case IOCTL_LOGIN_PROCESS:
+            // copy from user space
+            strcpy(handle, (char *)arg);
+            // check uniqueness of handle
+            flag = 0;
+            for (i = 0; i < login_index; ++i)
+            {
+                if(strcmp(logins[i].handle, handle) == 0)
+                {
+                    // not unique
+                    flag = 1;
+                    break;
+                }
+            }
+            if(flag)
+            {
+                retval = -1;
+                break;
+            }
             do_gettimeofday(&now);
             timestamp = now.tv_sec;
             memset(logins[login_index].handle, 0, 100);
@@ -233,7 +255,7 @@ static long demo_ioctl(struct file *file,
             login_index++;
             retval = 0;
             break;
-      case IOCTL_LOGOUT:
+      case IOCTL_LOGOUT_PROCESS:
             // get index for process
             temp = logstore[current->pid];
             // delete entry!

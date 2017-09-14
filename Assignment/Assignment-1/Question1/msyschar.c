@@ -6,41 +6,30 @@
 #include "syschar.h"
 
 #define MAX_BUF_SIZE 8192
-#define DEVNAME "demo3"
-#define MAXPROC 4
+#define DEVNAME "demo1"
 #define INIT 5
 #define MAX_MAP 1000
 #define MAX_MSG 1000
 #define MAX_LOGIN 1000
 
-// TOKEN For certifying the certifying authority
-#define CERTIFY_AUTH_TOKEN 17111056
-
 int get_EmptyMapSlot(void);
 int get_EmptyMsgSlot(void);
 
 static int major;
+
 atomic_t  device_opened;
 static unsigned buf_size;
 static unsigned current_usage = 0;
-static int total_write = 0;
 
-// mapping of message with its receiver process
+// mapping of a message and and its reader
 static struct map {
     int pid;
     int msg_id;
     // flag - whether msg read or not
     int flag;
-    // delete - 1 means deleted (or empty msg), 0 means in use!
+    // delete - 1 means deleted (or empty map), 0 means in use!
     int delete;
 }maps[MAX_MAP];
-
-// generated keys for each handle is stored
-static struct token
-{
-    char handle[100];
-    int key;
-}tokens[100];
 
 // Message information
 static struct mesg
@@ -56,14 +45,6 @@ static struct mesg
     int delete;
 }msgs[MAX_MSG];
 
-// format of a write message includes these three, this struct is used in conversion of ioctl params passed and access user input
-struct info
-{
-    char sender[100];
-    char receiver[100];
-    char message[100];
-};
-
 // Login information of all processes with pid and handle.
 static struct login{
     int pid;
@@ -71,14 +52,12 @@ static struct login{
     char handle[100];
 }logins[MAX_LOGIN];
 
-static int token_index = 0;
 static int login_index = 0;
 static int logstore[10000] = {0};
 
 static int msg_index = 0;
 static int map_index = 0;
 
-// When device is opened
 static int demo_open(struct inode *inode, struct file *file)
 {
     atomic_inc(&device_opened);
@@ -87,36 +66,14 @@ static int demo_open(struct inode *inode, struct file *file)
     return 0;
 }
 
-// when device is closed
 static int demo_release(struct inode *inode, struct file *file)
 {
         atomic_dec(&device_opened);
         module_put(THIS_MODULE);
         printk(KERN_INFO "Device closed successfully\n");
-
         return 0;
 }
 
-// a read function for reading all handles of logged processes into buffer.
-static ssize_t device_read(struct file *filp,
-                           char *buffer,
-                           size_t length,
-                           loff_t * offset)
-{
-    int retval, i;
-    char loginHandles[1000]={0};
-    memset(loginHandles, 0, 1000);
-    for (i = 0; i < login_index; ++i)
-    {
-        strcat(loginHandles, logins[i].handle);
-        strcat(loginHandles, ", ");
-    }
-    strcat(loginHandles, "\n");
-    retval = copy_to_user(buffer, loginHandles, length); 
-    return retval;  
-}
-
-// when device is read
 static ssize_t demo_read(struct file *filp,
                            char *buffer,
                            size_t length,
@@ -132,11 +89,15 @@ static ssize_t demo_read(struct file *filp,
     {
         if(maps[i].pid == pid && maps[i].flag == 1 && maps[i].delete == 0)
         {
+            // get message id
             msgId = maps[i].msg_id;            
-            // sending process
+            // get sending process
             sender = msgs[msgId].pid;
             
-            // combine handle + msg
+            // combine [timestamp] handle : msg
+            strcat(send_msg_handle, "[");
+            sprintf(send_msg_handle, "%s%d", send_msg_handle, msgs[msgId].time);
+            strcat(send_msg_handle, "] ");
             strcat(send_msg_handle, logins[ logstore[sender] ].handle);
             strcat(send_msg_handle, " :");
             strcat(send_msg_handle, msgs[msgId].message);
@@ -148,7 +109,6 @@ static ssize_t demo_read(struct file *filp,
             msgs[msgId].num_reads--;
         }
     }
-
     // copy to user space buffer!
     retval = copy_to_user(buffer, send_msg_handle, length);
 
@@ -173,15 +133,13 @@ static ssize_t demo_read(struct file *filp,
 static ssize_t
 demo_write(struct file *filp, const char *buff, size_t len, loff_t * off)
 {
-    // cast char * buffer into struct info
-    struct info *j = (struct info *)buff;
     int ret, i;
     struct timeval now;
     unsigned int temp;
     printk(KERN_INFO "Trying to support write....\n");
     // get free slot for message!
     msg_index = get_EmptyMsgSlot();
-    memset(msgs[msg_index].message , 0, 100);
+    memset(msgs[msg_index].message, 0, 100);
     current_usage -= len;
     // get timestamp
     do_gettimeofday(&now);
@@ -189,52 +147,26 @@ demo_write(struct file *filp, const char *buff, size_t len, loff_t * off)
 
     msgs[msg_index].pid = current->pid;
     msgs[msg_index].time = temp;
-    // copy message from user space
-    ret = copy_from_user(msgs[msg_index].message, j->message, len);
+    
+    // copy from user space
+    ret = copy_from_user(msgs[msg_index].message, buff, len);
     msgs[msg_index].num_reads = 0;
     msgs[msg_index].delete = 0;
     // get no. of readers
-    if(strlen(j->receiver))
+    for (i = 0; i < login_index; ++i)
     {
-        for (i = 0; i < login_index; ++i)
+        if(logins[i].time < msgs[msg_index].time && logins[i].pid != msgs[msg_index].pid)
         {
-            if(strcmp(logins[i].handle, j->receiver) == 0)
-            {
-                // increment readers!
-                msgs[msg_index].num_reads = 1;
+            // increment readers!
+            msgs[msg_index].num_reads = msgs[msg_index].num_reads + 1;
 
-                map_index = get_EmptyMapSlot();
-                maps[map_index].pid = logins[i].pid;
-                maps[map_index].msg_id = msg_index;
-                // set flag for reading
-                maps[map_index].flag = 1;
-                maps[map_index].delete = 0;
-            }
+            map_index = get_EmptyMapSlot();
+            maps[map_index].pid = logins[i].pid;
+            maps[map_index].msg_id = msg_index;
+            // set flag for reading
+            maps[map_index].flag = 1;
+            maps[map_index].delete = 0;
         }
-    }
-    else
-    {
-        for (i = 0; i < login_index; ++i)
-        {
-            if(logins[i].time < msgs[msg_index].time && logins[i].pid != msgs[msg_index].pid)
-            {
-                // increment readers!
-                msgs[msg_index].num_reads = msgs[msg_index].num_reads + 1;
-
-                map_index = get_EmptyMapSlot();
-                maps[map_index].pid = logins[i].pid;
-                maps[map_index].msg_id = msg_index;
-                // set flag for reading
-                maps[map_index].flag = 1;
-                maps[map_index].delete = 0;
-            }
-        }
-    }
-
-    if (ret == 0)
-    {
-    total_write += len;
-    return len;
     }
     return ret;
 }
@@ -244,39 +176,47 @@ static long demo_ioctl(struct file *file,
  unsigned long arg)
 
 {
-    int retval = -EINVAL, temp, i, auth_token;
-    // preset timestamp
-    struct token *usertoken;
+    int retval = -EINVAL, temp, i, flag = 0;
+    char handle[100];
     struct timeval now;
     unsigned int timestamp;
     switch(ioctl_num){
-      case IOCTL_LOGIN:
-            usertoken = (struct token *)arg;
-            for (i = 0; i < token_index; ++i)
+      case IOCTL_LOGIN_PROCESS:
+            // copy from user space
+            strcpy(handle, (char *)arg);
+            // check uniqueness of handle
+            flag = 0;
+            for (i = 0; i < login_index; ++i)
             {
-                if(strcmp(tokens[i].handle, usertoken->handle) == 0)
+                if(strcmp(logins[i].handle, handle) == 0)
+                {
+                    // not unique
+                    flag = 1;
                     break;
+                }
             }
-            printk("key - %d, user key - %d, bool - %d", tokens[i].key, usertoken->key,  (tokens[i].key == usertoken->key));
-            if(tokens[i].key != usertoken->key)
+            if(flag)
             {
-                // invalid KEY!! Cant login
-                return -1; 
+                retval = -1;
+                break;
             }
-            // create loginifr process, in case not created
             do_gettimeofday(&now);
             timestamp = now.tv_sec;
             memset(logins[login_index].handle, 0, 100);
+            // create login of process
             logins[login_index].pid = current->pid;
             logins[login_index].time = timestamp;
-            retval = copy_from_user(logins[login_index].handle, usertoken->handle, strlen(usertoken->handle));
+            // copy the handle
+            retval = copy_from_user(logins[login_index].handle, (char *)arg, strlen((char *)arg));
             // store pid for index!
             logstore[current->pid] = login_index;
             printk("Login successfully");
             login_index++;
             retval = 0;
             break;
-      case IOCTL_LOGOUT:
+
+      case IOCTL_LOGOUT_PROCESS:
+            
             // get index for process
             temp = logstore[current->pid];
             // delete entry!
@@ -285,34 +225,13 @@ static long demo_ioctl(struct file *file,
                 logins[i] = logins[i+1];
                 logstore[ logins[i].pid ] = i;
             }
-            // reset the entry in logstore
             logstore[current->pid] = 0;
             printk("logout successfully");
             login_index--;
             retval = 0;
             break;
-        case CHECK_LOGIN:
-            // get handles of all logged process
-            retval = device_read(file, (char *)arg, 1000, 0);
-            put_user('\0', (char *)arg + strlen((char *)arg));
-            break;
-        case LOGIN_CA:
-            // autheticate certifying authority
-            auth_token = (unsigned int)arg;
-            // When the process is certifying authority, then allow
-            if (auth_token == CERTIFY_AUTH_TOKEN)
-                retval = 0;
-            break;
-        case IOCTL_SETPAIR:
-            // ioctl for setting handle and key with all tokens
-            usertoken = (struct token *)arg;
-            retval = copy_from_user(tokens[token_index].handle, usertoken->handle, strlen(usertoken->handle));
-            tokens[token_index].key = usertoken->key;
-            token_index++;
-            break;
-      default:  
-        printk(KERN_INFO "Sorry, this operation isn't supported.\n");
-        break;
+      default:
+      printk(KERN_INFO "Sorry, this operation isn't supported.\n");
   }
   return retval;
 }
@@ -430,6 +349,7 @@ int get_EmptyMsgSlot(void)
     }
     return i;
 }
+
 
 MODULE_AUTHOR("nickedes@cse.iitk.ac.in");
 MODULE_LICENSE("GPL");

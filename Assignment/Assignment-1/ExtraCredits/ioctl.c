@@ -40,14 +40,19 @@ main()
     pair->key = key;
 
     // login ioctl call!
-    retval = ioctl(fd, IOCTL_LOGIN, (char *)pair);
-
+    retval = ioctl(fd, IOCTL_LOGIN_PROCESS, (char *)pair);
     if(retval == -1)
     {
         // login allowed only when key is valid
         printf("Invalid Key, you cannot login\n");
         close(fd);
         return ;
+    }
+    else if(retval == 1)
+    {
+        printf("Entered Handle is not unique.Try again\n");
+        close(fd);
+        return;
     }
     else if(retval < 0)
     {
@@ -107,7 +112,7 @@ main()
         scanf("%c", &ch);
     }
 
-    if(ioctl(fd, IOCTL_LOGOUT) < 0) {
+    if(ioctl(fd, IOCTL_LOGOUT_PROCESS) < 0) {
       perror("ioctl");
     }
     close(fd);

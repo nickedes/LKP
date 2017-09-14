@@ -21,10 +21,21 @@ main()
        perror("open");
        exit(-1);
     }
+
     printf("Enter handle :");
     scanf("%s", handle);
-    if(ioctl(fd, IOCTL_LOGIN, handle) < 0) {
-         perror("ioctl");
+
+    // Login ioctl call!
+    retval = ioctl(fd, IOCTL_LOGIN_PROCESS, handle);
+    if(retval == -1)
+    {
+        printf("Entered Handle is not unique.Try again\n");
+        close(fd);
+        return;
+    }
+    else if(retval < 0)
+    {
+        perror("ioctl");
     }
 
     printf("enter operation: r- read, w -write, l - check login,c - close\n");
@@ -71,7 +82,7 @@ main()
         scanf("%c", &ch);
     }
 
-    if(ioctl(fd, IOCTL_LOGOUT) < 0) {
+    if(ioctl(fd, IOCTL_LOGOUT_PROCESS) < 0) {
       perror("ioctl");
     }
     close(fd);
