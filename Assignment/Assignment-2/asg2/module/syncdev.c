@@ -347,6 +347,42 @@ int seqlock_read_data(struct data *gd, char *buf)
 }
 
 
+/* rcu lock implementation*/
+
+int rculock_init_cs(struct data *gd)
+{
+   struct cs_handler *handler = gd->handler;
+   INIT_RCU_HEAD(&handler->rcu);
+   return 0;
+}
+
+int rculock_cleanup_cs(struct data *gd)
+{
+   return 0;
+}
+
+int rculock_write_data(struct data *gd)
+{
+  struct cs_handler *handler = gd->handler;
+  BUG_ON(!handler->mustcall_write);
+  
+  write_lock(&handler->rwlock);
+  handler->mustcall_write(gd);  /*Call the Write CS*/
+  write_unlock(&handler->rwlock);
+
+  return 0;
+}       
+
+int rculock_read_data(struct data *gd, char *buf)
+{
+  struct cs_handler *handler = gd->handler;
+  BUG_ON(!handler->mustcall_write);
+
+  rcu_read_lock();
+  handler->mustcall_read(gd, buf);  /*Call the read CS*/
+  rcu_read_unlock();
+  return 0;
+}
 /*TODO   Your implementations for assignment II*/ 
 
 
