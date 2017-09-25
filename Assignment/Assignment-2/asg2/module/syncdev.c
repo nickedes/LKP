@@ -8,6 +8,7 @@
 #include <linux/spinlock.h>
 #include <linux/wait.h>
 #include <linux/sched.h>
+#include <linux/rcupdate.h>
 
 #define DEVICE_NAME "syncdev"	
 #define PAUSE_COUNT 20
@@ -24,6 +25,8 @@ struct data{
              struct cs_handler *handler; /*generic pointer to your lock specific 
                                          implementations*/
 };     
+
+DEFINE_SPINLOCK(gd_mutex);
 
 struct data *gdata;
 
@@ -96,6 +99,11 @@ static int seqlock_cleanup_cs(struct data *gd);
 static int seqlock_write_data(struct data *gd);
 static int seqlock_read_data(struct data *gd, char *buf);
 
+/*XXX rcu lock*/
+static int rculock_init_cs(struct data *gd);
+static int rculock_cleanup_cs(struct data *gd);
+static int rculock_write_data(struct data *gd);
+static int rculock_read_data(struct data *gd, char *buf);
 
 static  int readit(struct data *gd, char *buf)
 {
@@ -165,10 +173,10 @@ static inline int set_cs_implementation(struct cs_handler *handler, unsigned new
                          handler->write_data = seqlock_write_data;
                          break;
            case RCU:                    /*kernel RCU*/
-                         handler->init_cs = rwlock_init_cs;
-                         handler->cleanup_cs = rwlock_cleanup_cs;
-                         handler->read_data = rwlock_read_data;
-                         handler->write_data = rwlock_write_data;
+                         handler->init_cs = rculock_init_cs;
+                         handler->cleanup_cs = rculock_cleanup_cs;
+                         handler->read_data = rculock_read_data;
+                         handler->write_data = rculock_write_data;
                          break;
            case RWLOCK_CUSTOM:         /*Your custom read/write lock*/
            case RESEARCH_LOCK:          /*To improve over RCU*/
@@ -351,8 +359,6 @@ int seqlock_read_data(struct data *gd, char *buf)
 
 int rculock_init_cs(struct data *gd)
 {
-   struct cs_handler *handler = gd->handler;
-   INIT_RCU_HEAD(&handler->rcu);
    return 0;
 }
 
@@ -364,25 +370,38 @@ int rculock_cleanup_cs(struct data *gd)
 int rculock_write_data(struct data *gd)
 {
   struct cs_handler *handler = gd->handler;
+  struct data *new_gd;
+  struct data *old_gd;
   BUG_ON(!handler->mustcall_write);
   
-  write_lock(&handler->rwlock);
-  handler->mustcall_write(gd);  /*Call the Write CS*/
-  write_unlock(&handler->rwlock);
-
+  new_gd = kmalloc(sizeof(*new_gd), GFP_KERNEL);
+  spin_lock(&gd_mutex);
+  old_gd = rcu_dereference_protected(gd, lockdep_is_held(&gd_mutex));
+  *new_gd = *old_gd;
+  handler->mustcall_write(new_gd);  /*Call the Write CS*/
+  rcu_assign_pointer(gd, new_gd);
+  spin_unlock(&gd_mutex);
+  // kfree_rcu(old_gd->handler, rcu);
+  synchronize_rcu();
+  kfree(old_gd);
   return 0;
 }       
 
 int rculock_read_data(struct data *gd, char *buf)
 {
   struct cs_handler *handler = gd->handler;
+  struct data *p;
   BUG_ON(!handler->mustcall_write);
 
   rcu_read_lock();
-  handler->mustcall_read(gd, buf);  /*Call the read CS*/
+  p  =  rcu_dereference(gd);
+  handler->mustcall_read(p, buf);  /*Call the read CS*/
   rcu_read_unlock();
   return 0;
 }
+
+
+
 /*TODO   Your implementations for assignment II*/ 
 
 
