@@ -54,6 +54,7 @@ struct cs_handler{
                               seqlock_t seqlock;
                               struct rcu_head rcu;
                               /*Add your custom lock type here*/
+                              atomic_t custom;
                      };
                      
                      
@@ -104,6 +105,13 @@ static int rculock_init_cs(struct data *gd);
 static int rculock_cleanup_cs(struct data *gd);
 static int rculock_write_data(struct data *gd);
 static int rculock_read_data(struct data *gd, char *buf);
+void gd_reclaim(struct rcu_head *rp);
+
+/*XXX custom lock*/
+static int customlock_init_cs(struct data *gd);
+static int customlock_cleanup_cs(struct data *gd);
+static int customlock_write_data(struct data *gd);
+static int customlock_read_data(struct data *gd, char *buf);
 
 static  int readit(struct data *gd, char *buf)
 {
@@ -179,6 +187,11 @@ static inline int set_cs_implementation(struct cs_handler *handler, unsigned new
                          handler->write_data = rculock_write_data;
                          break;
            case RWLOCK_CUSTOM:         /*Your custom read/write lock*/
+                         handler->init_cs = customlock_init_cs;
+                         handler->cleanup_cs = customlock_cleanup_cs;
+                         handler->read_data = customlock_read_data;
+                         handler->write_data = customlock_write_data;
+                         break;
            case RESEARCH_LOCK:          /*To improve over RCU*/
            default:
                     printk(KERN_INFO "Not implemented currently, you have to implement these as shown for the first two cases\n");
@@ -359,12 +372,16 @@ int seqlock_read_data(struct data *gd, char *buf)
 
 int rculock_init_cs(struct data *gd)
 {
-   return 0;
+  struct cs_handler *handler = gd->handler;
+  init_rcu_head(&handler->rcu);
+  return 0;
 }
 
 int rculock_cleanup_cs(struct data *gd)
 {
-   return 0;
+    struct cs_handler *handler = gd->handler;
+    destroy_rcu_head(&handler->rcu);
+    return 0;
 }
 
 int rculock_write_data(struct data *gd)
@@ -372,20 +389,31 @@ int rculock_write_data(struct data *gd)
   struct cs_handler *handler = gd->handler;
   struct data *new_gd;
   struct data *old_gd;
+  struct cs_handler *new_handler;
+  struct cs_handler *old_handler;
   BUG_ON(!handler->mustcall_write);
   
   new_gd = kmalloc(sizeof(*new_gd), GFP_KERNEL);
   spin_lock(&gd_mutex);
   old_gd = rcu_dereference_protected(gd, lockdep_is_held(&gd_mutex));
   *new_gd = *old_gd;
-  handler->mustcall_write(new_gd);  /*Call the Write CS*/
+  new_handler = new_gd->handler;
+  new_handler->mustcall_write(new_gd);  /*Call the Write CS*/
   rcu_assign_pointer(gd, new_gd);
+  old_handler = old_gd->handler;
+  // call_rcu(&old_handler->rcu, gd_reclaim);
+  // synchronize_rcu();
+  // kfree(old_gd);
+  kfree_rcu(old_handler, rcu);
   spin_unlock(&gd_mutex);
-  // kfree_rcu(old_gd->handler, rcu);
-  synchronize_rcu();
-  kfree(old_gd);
   return 0;
-}       
+}
+
+void gd_reclaim(struct rcu_head *r)
+{
+  struct cs_handler *fp = container_of(r, struct cs_handler, rcu);
+  kfree(fp);
+}
 
 int rculock_read_data(struct data *gd, char *buf)
 {
@@ -400,6 +428,45 @@ int rculock_read_data(struct data *gd, char *buf)
   return 0;
 }
 
+/* custom lock implementation*/
+
+int customlock_init_cs(struct data *gd)
+{
+   struct cs_handler *handler = gd->handler;
+   seqlock_init(&handler->seqlock);
+   return 0;
+}
+
+int customlock_cleanup_cs(struct data *gd)
+{
+   return 0;
+}
+
+int customlock_write_data(struct data *gd)
+{
+  struct cs_handler *handler = gd->handler;
+  BUG_ON(!handler->mustcall_write);
+  
+  write_seqlock(&handler->seqlock);
+  handler->mustcall_write(gd);  /*Call the Write CS*/
+  write_sequnlock(&handler->seqlock);
+
+  return 0;
+}        
+
+int customlock_read_data(struct data *gd, char *buf)
+{
+  unsigned int seq;
+  struct cs_handler *handler = gd->handler;
+  BUG_ON(!handler->mustcall_write);
+
+  do {
+    seq = read_seqbegin(&handler->seqlock);
+    handler->mustcall_read(gd, buf);  /*Call the read CS*/
+  } while(read_seqretry(&handler->seqlock, seq));
+
+  return 0;
+}
 
 
 /*TODO   Your implementations for assignment II*/ 
