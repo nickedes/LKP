@@ -26,8 +26,6 @@ struct data{
                                          implementations*/
 };     
 
-DEFINE_SPINLOCK(gd_mutex);
-
 struct data *gdata;
 
 typedef enum{
@@ -392,20 +390,14 @@ int rculock_write_data(struct data *gd)
   struct cs_handler *new_handler;
   struct cs_handler *old_handler;
   BUG_ON(!handler->mustcall_write);
-  
   new_gd = kmalloc(sizeof(*new_gd), GFP_KERNEL);
-  spin_lock(&gd_mutex);
-  old_gd = rcu_dereference_protected(gd, lockdep_is_held(&gd_mutex));
+  old_gd = rcu_dereference(gd);
   *new_gd = *old_gd;
   new_handler = new_gd->handler;
   new_handler->mustcall_write(new_gd);  /*Call the Write CS*/
   rcu_assign_pointer(gd, new_gd);
   old_handler = old_gd->handler;
-  // call_rcu(&old_handler->rcu, gd_reclaim);
-  // synchronize_rcu();
-  // kfree(old_gd);
-  kfree_rcu(old_handler, rcu);
-  spin_unlock(&gd_mutex);
+  call_rcu(&old_handler->rcu, gd_reclaim);
   return 0;
 }
 

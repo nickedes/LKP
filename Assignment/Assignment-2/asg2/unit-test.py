@@ -2,7 +2,7 @@ from json import dump
 from subprocess import call
 from time import time
 
-locks = {"NONE":0,"SPINLOCK" : 1,"RWLOCK" : 2,"SEQLOCK" : 3,"RCU" : 0,"RWLOCK_CUSTOM" : 5}
+locks = {"SPINLOCK" : 1,"RWLOCK" : 2,"SEQLOCK" : 3,"RCU" : 4,"RWLOCK_CUSTOM" : 5}
 
 numthreads = 10
 ops_per_thread = 5000000
@@ -25,7 +25,6 @@ for lock in locks:
 		start = time()
 		call([benchmarkCmd], shell=True)
 		end = time()
-		print("time taken (in secs) - ", end - start)
 		results[lock][readop] = end - start
 
 # all results stored here!
