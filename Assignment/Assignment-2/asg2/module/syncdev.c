@@ -372,6 +372,7 @@ int rculock_init_cs(struct data *gd)
 {
   struct cs_handler *handler = gd->handler;
   init_rcu_head(&handler->rcu);
+  spin_lock_init(&handler->spin);
   return 0;
 }
 
@@ -387,17 +388,17 @@ int rculock_write_data(struct data *gd)
   struct cs_handler *handler = gd->handler;
   struct data *new_gd;
   struct data *old_gd;
-  struct cs_handler *new_handler;
-  struct cs_handler *old_handler;
   BUG_ON(!handler->mustcall_write);
   new_gd = kmalloc(sizeof(*new_gd), GFP_KERNEL);
-  old_gd = rcu_dereference(gd);
+
+  spin_lock(&handler->spin);
+  old_gd = rcu_dereference(gdata);
   *new_gd = *old_gd;
-  new_handler = new_gd->handler;
-  new_handler->mustcall_write(new_gd);  /*Call the Write CS*/
-  rcu_assign_pointer(gd, new_gd);
-  old_handler = old_gd->handler;
-  call_rcu(&old_handler->rcu, gd_reclaim);
+  handler->mustcall_write(new_gd);  /*Call the Write CS*/
+  rcu_assign_pointer(gdata, new_gd);
+  spin_unlock(&handler->spin);
+  synchronize_rcu();
+  kfree(old_gd);
   return 0;
 }
 
@@ -414,7 +415,7 @@ int rculock_read_data(struct data *gd, char *buf)
   BUG_ON(!handler->mustcall_write);
 
   rcu_read_lock();
-  p  =  rcu_dereference(gd);
+  p  =  rcu_dereference(gdata);
   handler->mustcall_read(p, buf);  /*Call the read CS*/
   rcu_read_unlock();
   return 0;
