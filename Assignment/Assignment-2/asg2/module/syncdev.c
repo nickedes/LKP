@@ -17,6 +17,86 @@
 static int Major;		
 atomic_t  open_count;	
 
+// Implementation of spin lock
+static inline unsigned xchg_c(void *lock, unsigned reg)
+{
+  __asm__ __volatile__("xchgl %0,%1"
+        :"=r" ((unsigned) reg)
+        :"m" (*(volatile unsigned *)lock), "0" (reg)
+        :"memory");
+  return reg;
+}
+
+#define BUS 1
+typedef unsigned custom_spinlock;
+
+static void cspin_lock(custom_spinlock *lock)
+{
+  while (1)
+  {
+    if (!xchg_c(lock, BUS)) return;
+  
+    while (*lock) cpu_relax();
+  }
+}
+
+static void cspin_unlock(custom_spinlock *lock)
+{
+  barrier();
+  *lock = 0;
+}
+
+typedef struct custom_rwlock custom_rwlock;
+struct custom_rwlock
+{
+  custom_spinlock lock;
+  atomic_t readers;
+};
+
+static void custom_wrlock(custom_rwlock *l)
+{
+  /* Get write lock */
+  cspin_lock(&l->lock);
+  
+  /* Wait for readers to finish */
+  while (atomic_read(&l->readers)) cpu_relax();
+}
+static void custom_init(custom_rwlock *l){
+atomic_set(&l->readers,0);
+}
+static void custom_wrunlock(custom_rwlock *l)
+{
+  cspin_unlock(&l->lock);
+}
+
+
+static void custom_rdlock(custom_rwlock *l)
+{
+  while (1)
+  {
+    /* Speculatively take read lock */
+    atomic_inc(&l->readers);
+    
+    /* Success? */
+    if (!l->lock) return;
+    
+    /* Failure - undo, and wait until we can try again */
+    atomic_dec(&l->readers);
+    while (l->lock) cpu_relax();
+  }
+}
+
+static void custom_rdunlock(custom_rwlock *l)
+{
+  atomic_dec(&l->readers);
+}
+
+
+
+
+
+
+
 struct data{
              long num_writes;
              long counter;
@@ -51,8 +131,8 @@ struct cs_handler{
                               rwlock_t rwlock;
                               seqlock_t seqlock;
                               struct rcu_head rcu;
-                              /*Add your custom lock type here*/
-                              atomic_t custom;
+                              custom_rwlock crwlock; /*Add your custom lock type here*/
+                              
                      };
                      
                      
@@ -396,9 +476,10 @@ int rculock_write_data(struct data *gd)
   *new_gd = *old_gd;
   handler->mustcall_write(new_gd);  /*Call the Write CS*/
   rcu_assign_pointer(gdata, new_gd);
+  call_rcu(&old->handler->rcu, gd_reclaim);
   spin_unlock(&handler->spin);
-  synchronize_rcu();
-  kfree(old_gd);
+  // synchronize_rcu();
+  // kfree(old_gd);
   return 0;
 }
 
@@ -426,10 +507,9 @@ int rculock_read_data(struct data *gd, char *buf)
 int customlock_init_cs(struct data *gd)
 {
    struct cs_handler *handler = gd->handler;
-   seqlock_init(&handler->seqlock);
+   custom_init(&handler->crwlock);
    return 0;
 }
-
 int customlock_cleanup_cs(struct data *gd)
 {
    return 0;
@@ -437,29 +517,28 @@ int customlock_cleanup_cs(struct data *gd)
 
 int customlock_write_data(struct data *gd)
 {
+
   struct cs_handler *handler = gd->handler;
   BUG_ON(!handler->mustcall_write);
   
-  write_seqlock(&handler->seqlock);
+  custom_wrlock(&handler->crwlock);
   handler->mustcall_write(gd);  /*Call the Write CS*/
-  write_sequnlock(&handler->seqlock);
+  custom_wrunlock(&handler->crwlock);
 
   return 0;
-}        
+} 
 
 int customlock_read_data(struct data *gd, char *buf)
 {
-  unsigned int seq;
   struct cs_handler *handler = gd->handler;
   BUG_ON(!handler->mustcall_write);
 
-  do {
-    seq = read_seqbegin(&handler->seqlock);
-    handler->mustcall_read(gd, buf);  /*Call the read CS*/
-  } while(read_seqretry(&handler->seqlock, seq));
-
+  custom_rdlock(&handler->crwlock);
+  handler->mustcall_read(gd, buf);  /*Call the read CS*/
+  custom_rdunlock(&handler->crwlock);
   return 0;
 }
+
 
 
 /*TODO   Your implementations for assignment II*/ 

@@ -4,7 +4,7 @@ from time import time
 
 locks = {"SPINLOCK" : 1,"RWLOCK" : 2,"SEQLOCK" : 3,"RCU" : 4,"RWLOCK_CUSTOM" : 5}
 
-numthreads = 10
+numthreads = 8
 ops_per_thread = 5000000
 readops = [99, 96, 93, 90, 87, 84, 80, 77, 74, 70]
 
@@ -26,6 +26,9 @@ for lock in locks:
 		call([benchmarkCmd], shell=True)
 		end = time()
 		results[lock][readop] = end - start
+		with open('data.json', 'w') as fp:
+			dump(results, fp, sort_keys=True, indent=4)
+
 
 # all results stored here!
 with open('data.json', 'w') as fp:
