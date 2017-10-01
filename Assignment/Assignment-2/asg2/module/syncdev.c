@@ -476,10 +476,10 @@ int rculock_write_data(struct data *gd)
   *new_gd = *old_gd;
   handler->mustcall_write(new_gd);  /*Call the Write CS*/
   rcu_assign_pointer(gdata, new_gd);
-  call_rcu(&old->handler->rcu, gd_reclaim);
   spin_unlock(&handler->spin);
-  // synchronize_rcu();
-  // kfree(old_gd);
+  // call_rcu(&old_gd->handler->rcu, gd_reclaim);
+  synchronize_rcu();
+  kfree(old_gd);
   return 0;
 }
 

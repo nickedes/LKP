@@ -4,7 +4,7 @@ from time import time
 
 locks = {"SPINLOCK" : 1,"RWLOCK" : 2,"SEQLOCK" : 3,"RCU" : 4,"RWLOCK_CUSTOM" : 5}
 
-numthreads = 8
+numthreads = 10
 ops_per_thread = 5000000
 readops = [99, 96, 93, 90, 87, 84, 80, 77, 74, 70]
 
