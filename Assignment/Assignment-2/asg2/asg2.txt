@@ -24,7 +24,7 @@ asg2-rollno
      |----------run
                     |------ correctness.txt                     Output of tests showing correctness of your
                     |                                                     implementation 
-                     |----- unit-test.sh (or .py etc.)        when executed, it will execute all the 
+                    |----- unit-test.sh (or .py etc.)        when executed, it will execute all the 
                     |                                                     correctness tests reported in correctness.txt
                     |----analysis-test.sh (or .py etc.)   when executed, it will execute all tests which                    |                                                    generates data used to write your empirical            
                     |                                                    analysis report inside doc folder              

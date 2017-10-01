@@ -1,17 +1,16 @@
-from json import load
-from subprocess import call
+from json import load,dump
 import matplotlib.pyplot as plt
+from subprocess import call
+from time import time, sleep
 
 
 def plot(l, mean, sd):
 	# sample
-	print(l, mean, sd)
 	leg = ["SPINLOCK", "RWLOCK", "SEQLOCK", "RCU", "RWLOCK_CUSTOM"]
 	plt.xticks(l, leg)
 	plt.errorbar(l, mean, sd, linestyle='None', marker='o')
-	plt.legend()
-	plt.show()
 	plt.savefig("stats.png")   # save the figure to file
+	plt.show()
 	plt.close()
 
 locks = {"SPINLOCK": 1, "RWLOCK": 2,
@@ -25,25 +24,25 @@ results = {}
 for lock in locks:
 	results[lock] = {}
 
-for lock in locks:
-	print("Lock - " + lock)
-	changelock = "echo "+ str(locks[lock]) +" > /sys/kernel/asg2_lock"
-	print(changelock)
-	call([changelock], shell=True)
-	for readop in readops:
-		# ./syncbench <numthreads> <ops/thread> <readops (%)> <writeops (%)>
-		benchmarkCmd = "./syncbench " + str(numthreads) + " " + str(ops_per_thread) + " " + str(readop) + " " + str(100-readop)
-		print(benchmarkCmd)
-		start = time()
-		call([benchmarkCmd], shell=True)
-		end = time()
-		results[lock][readop] = end - start
-		with open('data.json', 'w') as fp:
-			dump(results, fp, sort_keys=True, indent=4)
+# for lock in locks:
+# 	print("Lock - " + lock)
+# 	changelock = "echo "+ str(locks[lock]) +" > /sys/kernel/asg2_lock"
+# 	print(changelock)
+# 	call([changelock], shell=True)
+# 	for readop in readops:
+# 		# ./syncbench <numthreads> <ops/thread> <readops (%)> <writeops (%)>
+# 		benchmarkCmd = "./syncbench " + str(numthreads) + " " + str(ops_per_thread) + " " + str(readop) + " " + str(100-readop)
+# 		print(benchmarkCmd)
+# 		start = time()
+# 		call([benchmarkCmd], shell=True)
+# 		end = time()
+# 		results[lock][readop] = end - start
+# 		with open('data.json', 'w') as fp:
+# 			dump(results, fp, sort_keys=True, indent=4)
 
-# all results stored here!
-with open('data.json', 'w') as fp:
-	dump(results, fp, sort_keys=True, indent=4)
+# # all results stored here!
+# with open('data.json', 'w') as fp:
+# 	dump(results, fp, sort_keys=True, indent=4)
 
 # Get saved results
 
@@ -54,6 +53,29 @@ mean = [0]*(len(locks)+1)
 sd = [0]*(len(locks)+1)
 l = [0]*(len(locks)+1)
 
+print("###########################################################################")
+print("Graphs For each of the locks showing there behaviour for different read ops percentage")
+print("NOTE : Close EACH Graph figure to see further")
+sleep(3)
+
+plt.xlabel('Percentage of read operations --->')
+plt.ylabel('Time taken (in secs) --->')
+plt.title("Plot for ")
+
+legends = []
+
+for lock in results:
+	# observations for a lock and different percentage of read ops
+	percent_readops = sorted(results[lock])
+	time = [results[lock][readop] for readop in percent_readops]
+	plt.plot(percent_readops, time, marker="o")
+	legends.append(lock)
+
+plt.legend(legends, loc='upper right', fontsize='small')
+plt.savefig("Locks-Comparison-graph.png")   # save the figure to file
+plt.show()
+plt.close()
+
 for lock in results:
 	# observations for a lock and different percentage of read ops
 	percent_readops = sorted(results[lock])
@@ -62,10 +84,11 @@ for lock in results:
 	plt.xlabel('Percentage of read operations --->')
 	plt.ylabel('Time taken (in secs) --->')
 	plt.title("Plot for " + lock)
+	# plt.savefig(lock + "-graph.png")   # save the figure to file
 	plt.show()
-	plt.savefig(lock + "-graph.png")   # save the figure to file
 	plt.close()
 
+print("###########################################################################")
 
 for lock in results:
 	# calculate total time taken for each lock
@@ -79,9 +102,15 @@ for lock in results:
 
 	variance = variance/len(results[lock].values())
 	std_dev = variance**0.5
-	# print(lock, ", Total time - ", totalTime, "Avg Time - ", avgTime,
-	#       "Variance - ", variance, "Standard Deviation - ", std_dev)
-
+	print()
+	print("Results for " + lock)
+	print("Total time for all readops (in secs) - ", totalTime)
+	print("Avg Time (in secs) - ", avgTime)
+	print("Variance (in secs^2) - ", variance)
+	print("Standard Deviation (in secs) - ", std_dev)
+	print()
+	print("###########################################################################")
+	sleep(3)
 	# Save avg and standard deviation observed
 	mean[locks[lock]] = avgTime
 	l[locks[lock]] = locks[lock]
