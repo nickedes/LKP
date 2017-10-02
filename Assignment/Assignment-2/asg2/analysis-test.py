@@ -5,13 +5,23 @@ from time import time, sleep
 
 
 def plot(l, mean, sd):
-	# sample
-	leg = ["SPINLOCK", "RWLOCK", "SEQLOCK", "RCU", "RWLOCK_CUSTOM"]
-	plt.xticks(l, leg)
-	plt.errorbar(l, mean, sd, linestyle='None', marker='o')
-	plt.savefig("stats.png")   # save the figure to file
-	plt.show()
-	plt.close()
+    # sample
+    leg = ["SPINLOCK", "RWLOCK", "SEQLOCK", "RCU", "RWLOCK_CUSTOM"]
+    min_index = mean.index(min(mean))
+    print("###########################################################################")
+    print("Fastest Lock among all these - " + leg[min_index])
+    print("Its average time taken (in secs) is - ", mean[min_index])
+    max_index = mean.index(max(mean))
+    print("Slowest Lock among all these - " + leg[max_index])
+    print("Its average time taken (in secs) is - ", mean[max_index])
+
+    plt.xticks(l, leg)
+    plt.ylabel('Average Time taken (in secs) --->')
+    plt.xlabel('Locks --->')
+    plt.errorbar(l, mean, sd, linestyle='None', marker='o')
+    plt.savefig("stats.png")   # save the figure to file
+    plt.show()
+    plt.close()
 
 locks = {"SPINLOCK": 1, "RWLOCK": 2,
 		 "SEQLOCK": 3, "RCU": 4, "RWLOCK_CUSTOM": 5}
