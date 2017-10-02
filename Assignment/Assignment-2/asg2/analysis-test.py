@@ -5,7 +5,7 @@ from time import time, sleep
 
 
 def plot(l, mean, sd):
-    # sample
+    # plot the mean and deviation for all locks
     leg = ["SPINLOCK", "RWLOCK", "SEQLOCK", "RCU", "RWLOCK_CUSTOM"]
     min_index = mean.index(min(mean))
     print("###########################################################################")
@@ -25,7 +25,9 @@ def plot(l, mean, sd):
 
 
 def compareLocks(results):
-
+    """
+        Compare the time taken by each lock 
+    """
     fig, (ax, ax2) = plt.subplots(2, sharex=True)
     # plot the same data on both axes
     ax.plot(list(results["RCU"].keys()), list(
@@ -39,13 +41,12 @@ def compareLocks(results):
                 results[lock].values()), marker="o")
 
     print(legends)
-    # zoom-in / limit the view to different portions of the data
     limit_from, limit_to = min(results["RCU"].values()), max(
         results["RCU"].values())
 
+    # zoom-in / limit the view to different portions of the data
     ax.set_ylim(limit_from, limit_to+500)
     ax2.set_ylim(100, 111)  # most of the data
-    # ax2.set_xlim(9,10) # outliers only
 
     # hide the spines between ax and ax2
     # ax.spines['bottom'].set_visible(False)
@@ -57,7 +58,7 @@ def compareLocks(results):
     plt.ylabel('Time taken (in secs) --->')
     ax.legend(["RCU"], loc='upper right', fontsize='small')
     ax2.legend(legends, loc='upper right', fontsize='small')
-    # plt.savefig("Locks-Comparison-graph.png")   # save the figure to file
+    plt.savefig("Locks-Comparison-graph.png")   # save the figure to file
     plt.show()
     plt.close()
 
@@ -73,25 +74,25 @@ results = {}
 for lock in locks:
     results[lock] = {}
 
-# for lock in locks:
-#   print("Lock - " + lock)
-#   changelock = "echo "+ str(locks[lock]) +" > /sys/kernel/asg2_lock"
-#   print(changelock)
-#   call([changelock], shell=True)
-#   for readop in readops:
-#       # ./syncbench <numthreads> <ops/thread> <readops (%)> <writeops (%)>
-#       benchmarkCmd = "./syncbench " + str(numthreads) + " " + str(ops_per_thread) + " " + str(readop) + " " + str(100-readop)
-#       print(benchmarkCmd)
-#       start = time()
-#       call([benchmarkCmd], shell=True)
-#       end = time()
-#       results[lock][readop] = end - start
-#       with open('data.json', 'w') as fp:
-#           dump(results, fp, sort_keys=True, indent=4)
+for lock in locks:
+  print("Lock - " + lock)
+  changelock = "echo "+ str(locks[lock]) +" > /sys/kernel/asg2_lock"
+  print(changelock)
+  call([changelock], shell=True)
+  for readop in readops:
+      # ./syncbench <numthreads> <ops/thread> <readops (%)> <writeops (%)>
+      benchmarkCmd = "./syncbench " + str(numthreads) + " " + str(ops_per_thread) + " " + str(readop) + " " + str(100-readop)
+      print(benchmarkCmd)
+      start = time()
+      call([benchmarkCmd], shell=True)
+      end = time()
+      results[lock][readop] = end - start
+      with open('data.json', 'w') as fp:
+          dump(results, fp, sort_keys=True, indent=4)
 
-# # all results stored here!
-# with open('data.json', 'w') as fp:
-#   dump(results, fp, sort_keys=True, indent=4)
+# all results stored here!
+with open('data.json', 'w') as fp:
+  dump(results, fp, sort_keys=True, indent=4)
 
 # Get saved results
 
@@ -146,7 +147,7 @@ for lock in results:
     plt.xlabel('Percentage of read operations --->')
     plt.ylabel('Time taken (in secs) --->')
     plt.title("Plot for " + lock)
-    # plt.savefig(lock + "-graph.png")   # save the figure to file
+    plt.savefig(lock + "-graph.png")   # save the figure to file
     plt.show()
     plt.close()
 

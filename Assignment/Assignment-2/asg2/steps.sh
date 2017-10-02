@@ -6,4 +6,4 @@ insmod module/syncdev.ko;
 
 mknod /dev/syncdev c 247 0;
 
-python3 unit-test.py > correctness.txt
+python3 unit-test.py
