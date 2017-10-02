@@ -23,6 +23,45 @@ def plot(l, mean, sd):
     plt.show()
     plt.close()
 
+	
+def compareLocks(results):
+
+    fig, (ax, ax2) = plt.subplots(2, sharex=True)
+    # plot the same data on both axes
+    ax.plot(list(results["RCU"].keys()), list(
+        results["RCU"].values()), marker="o")
+    legends = []
+
+    for lock in results:
+        if lock != "RCU":
+            legends.append(lock)
+            ax2.plot(list(results[lock].keys()), list(
+                results[lock].values()), marker="o")
+
+    print(legends)
+    # zoom-in / limit the view to different portions of the data
+    limit_from, limit_to = min(results["RCU"].values()), max(
+        results["RCU"].values())
+
+    ax.set_ylim(limit_from, limit_to+500)
+    ax2.set_ylim(100, 111)  # most of the data
+    # ax2.set_xlim(9,10) # outliers only
+
+    # hide the spines between ax and ax2
+    # ax.spines['bottom'].set_visible(False)
+    ax2.spines['top'].set_visible(False)
+
+    # Make the spacing between the two axes a bit smaller
+    plt.subplots_adjust(wspace=0.15)
+    plt.xlabel('Percentage of read operations --->')
+    plt.ylabel('Time taken (in secs) --->')
+    ax.legend(["RCU"], loc='upper right', fontsize='small')
+    ax2.legend(legends, loc='upper right', fontsize='small')
+    # plt.savefig("Locks-Comparison-graph.png")   # save the figure to file
+    plt.show()
+    plt.close()
+
+
 locks = {"SPINLOCK": 1, "RWLOCK": 2,
 		 "SEQLOCK": 3, "RCU": 4, "RWLOCK_CUSTOM": 5}
 
