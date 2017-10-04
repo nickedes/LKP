@@ -146,75 +146,75 @@ Thread = 4 num_reads = 35055 num_writes= 14945 read_cycles= 502189468 write_cycl
 Lock - RCU
 echo 4 > /sys/kernel/asg2_lock
 ./syncbench 4 50000 99 1
-Total time taken = 8136289770
+Total time taken = 1306014341
 ----------- Thread Stats ------------
-Thread = 1 num_reads = 49502 num_writes= 498 read_cycles= 701674336 write_cycles = 6637102882
-Thread = 2 num_reads = 49492 num_writes= 508 read_cycles= 723773770 write_cycles = 6882823941
-Thread = 3 num_reads = 49527 num_writes= 473 read_cycles= 712669502 write_cycles = 6115380680
-Thread = 4 num_reads = 49518 num_writes= 482 read_cycles= 710724524 write_cycles = 6306692949
+Thread = 1 num_reads = 49502 num_writes= 498 read_cycles= 595458577 write_cycles = 4312345
+Thread = 2 num_reads = 49492 num_writes= 508 read_cycles= 832807405 write_cycles = 4748134
+Thread = 3 num_reads = 49527 num_writes= 473 read_cycles= 641936996 write_cycles = 3882594
+Thread = 4 num_reads = 49518 num_writes= 482 read_cycles= 671615148 write_cycles = 4274195
 ./syncbench 4 50000 96 4
-Total time taken = 28505271526
+Total time taken = 1372481084
 ----------- Thread Stats ------------
-Thread = 1 num_reads = 48022 num_writes= 1978 read_cycles= 901410170 write_cycles = 26661488859
-Thread = 2 num_reads = 48017 num_writes= 1983 read_cycles= 915990996 write_cycles = 26949870535
-Thread = 3 num_reads = 48029 num_writes= 1971 read_cycles= 885040853 write_cycles = 26243793229
-Thread = 4 num_reads = 48036 num_writes= 1964 read_cycles= 919478605 write_cycles = 26581925128
+Thread = 1 num_reads = 48022 num_writes= 1978 read_cycles= 650474736 write_cycles = 23419402
+Thread = 2 num_reads = 48017 num_writes= 1983 read_cycles= 514797647 write_cycles = 17929704
+Thread = 3 num_reads = 48029 num_writes= 1971 read_cycles= 580572611 write_cycles = 16184177
+Thread = 4 num_reads = 48036 num_writes= 1964 read_cycles= 659088350 write_cycles = 18247174
 ./syncbench 4 50000 93 7
-Total time taken = 54466197418
+Total time taken = 1542436804
 ----------- Thread Stats ------------
-Thread = 1 num_reads = 46578 num_writes= 3422 read_cycles= 814611502 write_cycles = 51666442642
-Thread = 2 num_reads = 46505 num_writes= 3495 read_cycles= 821869605 write_cycles = 53088874197
-Thread = 3 num_reads = 46576 num_writes= 3424 read_cycles= 822714320 write_cycles = 51814563259
-Thread = 4 num_reads = 46521 num_writes= 3479 read_cycles= 828956422 write_cycles = 52902954999
+Thread = 1 num_reads = 46578 num_writes= 3422 read_cycles= 554850262 write_cycles = 38138133
+Thread = 2 num_reads = 46505 num_writes= 3495 read_cycles= 791647538 write_cycles = 31407251
+Thread = 3 num_reads = 46576 num_writes= 3424 read_cycles= 646992957 write_cycles = 30753886
+Thread = 4 num_reads = 46521 num_writes= 3479 read_cycles= 729418685 write_cycles = 51364094
 ./syncbench 4 50000 90 10
-Total time taken = 79861289453
+Total time taken = 1399615466
 ----------- Thread Stats ------------
-Thread = 1 num_reads = 45140 num_writes= 4860 read_cycles= 770817151 write_cycles = 76151897815
-Thread = 2 num_reads = 45015 num_writes= 4985 read_cycles= 817177516 write_cycles = 78538741459
-Thread = 3 num_reads = 45028 num_writes= 4972 read_cycles= 812557623 write_cycles = 78283832582
-Thread = 4 num_reads = 45073 num_writes= 4927 read_cycles= 816334821 write_cycles = 76532460778
+Thread = 1 num_reads = 45140 num_writes= 4860 read_cycles= 633088808 write_cycles = 74589550
+Thread = 2 num_reads = 45015 num_writes= 4985 read_cycles= 559959024 write_cycles = 92257921
+Thread = 3 num_reads = 45028 num_writes= 4972 read_cycles= 530503091 write_cycles = 83959001
+Thread = 4 num_reads = 45073 num_writes= 4927 read_cycles= 701630124 write_cycles = 64101459
 ./syncbench 4 50000 87 13
-Total time taken = 101864281790
+Total time taken = 1476273997
 ----------- Thread Stats ------------
-Thread = 1 num_reads = 43638 num_writes= 6362 read_cycles= 839748624 write_cycles = 97374955302
-Thread = 2 num_reads = 43514 num_writes= 6486 read_cycles= 823802892 write_cycles = 100500700788
-Thread = 3 num_reads = 43513 num_writes= 6487 read_cycles= 830794711 write_cycles = 100496000271
-Thread = 4 num_reads = 43603 num_writes= 6397 read_cycles= 829239926 write_cycles = 98430625057
+Thread = 1 num_reads = 43638 num_writes= 6362 read_cycles= 744260868 write_cycles = 64873651
+Thread = 2 num_reads = 43514 num_writes= 6486 read_cycles= 582425354 write_cycles = 88921077
+Thread = 3 num_reads = 43513 num_writes= 6487 read_cycles= 525069119 write_cycles = 73319657
+Thread = 4 num_reads = 43603 num_writes= 6397 read_cycles= 495160028 write_cycles = 89000274
 ./syncbench 4 50000 84 16
-Total time taken = 116916582833
+Total time taken = 1364043387
 ----------- Thread Stats ------------
-Thread = 1 num_reads = 42146 num_writes= 7854 read_cycles= 982295221 write_cycles = 112165938247
-Thread = 2 num_reads = 42021 num_writes= 7979 read_cycles= 984742943 write_cycles = 114777253871
-Thread = 3 num_reads = 41963 num_writes= 8037 read_cycles= 973948463 write_cycles = 115278215911
-Thread = 4 num_reads = 42114 num_writes= 7886 read_cycles= 976796783 write_cycles = 112793100435
+Thread = 1 num_reads = 42146 num_writes= 7854 read_cycles= 607370432 write_cycles = 65741774
+Thread = 2 num_reads = 42021 num_writes= 7979 read_cycles= 487816945 write_cycles = 59320377
+Thread = 3 num_reads = 41963 num_writes= 8037 read_cycles= 489655599 write_cycles = 91046815
+Thread = 4 num_reads = 42114 num_writes= 7886 read_cycles= 564066780 write_cycles = 78064249
 ./syncbench 4 50000 80 20
-Total time taken = 148103919389
+Total time taken = 1481764011
 ----------- Thread Stats ------------
-Thread = 1 num_reads = 40072 num_writes= 9928 read_cycles= 947010764 write_cycles = 143996128318
-Thread = 2 num_reads = 40068 num_writes= 9932 read_cycles= 940129493 write_cycles = 142691920920
-Thread = 3 num_reads = 39926 num_writes= 10074 read_cycles= 944972528 write_cycles = 146541314321
-Thread = 4 num_reads = 40083 num_writes= 9917 read_cycles= 949686730 write_cycles = 143095062392
+Thread = 1 num_reads = 40072 num_writes= 9928 read_cycles= 685420083 write_cycles = 99389119
+Thread = 2 num_reads = 40068 num_writes= 9932 read_cycles= 457367154 write_cycles = 101061345
+Thread = 3 num_reads = 39926 num_writes= 10074 read_cycles= 510592435 write_cycles = 121743970
+Thread = 4 num_reads = 40083 num_writes= 9917 read_cycles= 554409628 write_cycles = 77131441
 ./syncbench 4 50000 77 23
-Total time taken = 173962144930
+Total time taken = 1537324044
 ----------- Thread Stats ------------
-Thread = 1 num_reads = 38569 num_writes= 11431 read_cycles= 912260833 write_cycles = 169934824748
-Thread = 2 num_reads = 38507 num_writes= 11493 read_cycles= 935783112 write_cycles = 170795478097
-Thread = 3 num_reads = 38454 num_writes= 11546 read_cycles= 914684039 write_cycles = 172425562230
-Thread = 4 num_reads = 38525 num_writes= 11475 read_cycles= 907060517 write_cycles = 170285416264
+Thread = 1 num_reads = 38569 num_writes= 11431 read_cycles= 475151797 write_cycles = 145559446
+Thread = 2 num_reads = 38507 num_writes= 11493 read_cycles= 596964947 write_cycles = 102434842
+Thread = 3 num_reads = 38454 num_writes= 11546 read_cycles= 404279576 write_cycles = 101480782
+Thread = 4 num_reads = 38525 num_writes= 11475 read_cycles= 539356603 write_cycles = 161738895
 ./syncbench 4 50000 74 26
-Total time taken = 181392335534
+Total time taken = 1400630641
 ----------- Thread Stats ------------
-Thread = 1 num_reads = 37053 num_writes= 12947 read_cycles= 1118136070 write_cycles = 176630470793
-Thread = 2 num_reads = 36989 num_writes= 13011 read_cycles= 1110444286 write_cycles = 178260527031
-Thread = 3 num_reads = 36956 num_writes= 13044 read_cycles= 1114065474 write_cycles = 179497361835
-Thread = 4 num_reads = 37018 num_writes= 12982 read_cycles= 1116615066 write_cycles = 177232556652
+Thread = 1 num_reads = 37053 num_writes= 12947 read_cycles= 582185328 write_cycles = 172299179
+Thread = 2 num_reads = 36989 num_writes= 13011 read_cycles= 382842065 write_cycles = 130690607
+Thread = 3 num_reads = 36956 num_writes= 13044 read_cycles= 397227812 write_cycles = 113674035
+Thread = 4 num_reads = 37018 num_writes= 12982 read_cycles= 592981862 write_cycles = 205678065
 ./syncbench 4 50000 70 30
-Total time taken = 212202044079
+Total time taken = 1248071053
 ----------- Thread Stats ------------
-Thread = 1 num_reads = 35075 num_writes= 14925 read_cycles= 1129020212 write_cycles = 206890686224
-Thread = 2 num_reads = 34987 num_writes= 15013 read_cycles= 1121744083 write_cycles = 208160634548
-Thread = 3 num_reads = 34915 num_writes= 15085 read_cycles= 1126743489 write_cycles = 210284394327
-Thread = 4 num_reads = 35055 num_writes= 14945 read_cycles= 1127813018 write_cycles = 206866855629
+Thread = 1 num_reads = 35075 num_writes= 14925 read_cycles= 373022070 write_cycles = 218850133
+Thread = 2 num_reads = 34987 num_writes= 15013 read_cycles= 352043521 write_cycles = 135296519
+Thread = 3 num_reads = 34915 num_writes= 15085 read_cycles= 409132580 write_cycles = 132196995
+Thread = 4 num_reads = 35055 num_writes= 14945 read_cycles= 594318633 write_cycles = 165548832
 Lock - RWLOCK
 echo 2 > /sys/kernel/asg2_lock
 ./syncbench 4 50000 99 1

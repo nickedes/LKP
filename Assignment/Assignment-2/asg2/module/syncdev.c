@@ -15,15 +15,12 @@
 
 
 static int Major;		
-atomic_t  open_count;	
+atomic_t  open_count;
 
 // Implementation of spin lock
 static inline unsigned xchg_c(void *lock, unsigned reg)
 {
-  __asm__ __volatile__("xchgl %0,%1"
-        :"=r" ((unsigned) reg)
-        :"m" (*(volatile unsigned *)lock), "0" (reg)
-        :"memory");
+  __asm__ __volatile__("xchgl %0,%1":"=r" ((unsigned) reg):"m" (*(volatile unsigned *)lock), "0" (reg):"memory");
   return reg;
 }
 
@@ -102,9 +99,10 @@ struct data{
              long counter;
              long result;
              int lock_type;
+             struct rcu_head rcu;
              struct cs_handler *handler; /*generic pointer to your lock specific 
                                          implementations*/
-};     
+};
 
 struct data *gdata;
 
@@ -451,7 +449,7 @@ int seqlock_read_data(struct data *gd, char *buf)
 int rculock_init_cs(struct data *gd)
 {
   struct cs_handler *handler = gd->handler;
-  init_rcu_head(&handler->rcu);
+  init_rcu_head(&gd->rcu);
   spin_lock_init(&handler->spin);
   return 0;
 }
@@ -477,15 +475,16 @@ int rculock_write_data(struct data *gd)
   handler->mustcall_write(new_gd);  /*Call the Write CS*/
   rcu_assign_pointer(gdata, new_gd);
   spin_unlock(&handler->spin);
-  // call_rcu(&old_gd->handler->rcu, gd_reclaim);
-  synchronize_rcu();
-  kfree(old_gd);
+  call_rcu(&old_gd->rcu, gd_reclaim);
+  // synchronize_rcu();
+  // kfree(old_gd);
   return 0;
 }
 
 void gd_reclaim(struct rcu_head *r)
 {
-  struct cs_handler *fp = container_of(r, struct cs_handler, rcu);
+  // struct cs_handler *fp = container_of(r, struct cs_handler, rcu);
+  struct data *fp = container_of(r, struct data, rcu);
   kfree(fp);
 }
 
