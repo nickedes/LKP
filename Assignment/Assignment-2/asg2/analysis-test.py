@@ -62,12 +62,18 @@ def compareLocks(results):
     plt.show()
     plt.close()
 
+# Compile module!
+call(["make"], shell=True)
+call(["rmmod syncdev"], shell=True)
+call(["insmod module/syncdev.ko"], shell=True)
+call(["mknod /dev/syncdev c 247 0"], shell=True)
 
 locks = {"SPINLOCK": 1, "RWLOCK": 2,
          "SEQLOCK": 3, "RCU": 4, "RWLOCK_CUSTOM": 5}
 
 numthreads = 10
 ops_per_thread = 5000000
+readops = [99, 96, 93, 90, 87, 84, 80, 77, 74, 70]
 
 results = {}
 
@@ -87,17 +93,10 @@ for lock in locks:
       call([benchmarkCmd], shell=True)
       end = time()
       results[lock][readop] = end - start
-      with open('data.json', 'w') as fp:
-          dump(results, fp, sort_keys=True, indent=4)
 
 # all results stored here!
 with open('data.json', 'w') as fp:
-  dump(results, fp, sort_keys=True, indent=4)
-
-# Get saved results
-
-with open('data.json', 'r') as fp:
-    results = load(fp)
+  dump(results, fp, indent=4)
 
 mean = [0]*(len(locks)+1)
 sd = [0]*(len(locks)+1)
