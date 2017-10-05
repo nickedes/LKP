@@ -24,14 +24,15 @@ static inline unsigned xchg_c(void *lock, unsigned reg)
   return reg;
 }
 
-#define BUS 1
+#define STORE 1
 typedef unsigned custom_spinlock;
 
 static void cspin_lock(custom_spinlock *lock)
 {
   while (1)
   {
-    if (!xchg_c(lock, BUS)) return;
+    // return if lock becomes 1, => locked
+    if (xchg_c(lock, STORE) == 0) return;
   
     while (*lock) cpu_relax();
   }
@@ -52,32 +53,34 @@ struct custom_rwlock
 
 static void custom_wrlock(custom_rwlock *l)
 {
-  /* Get write lock */
+  // Get write lock
   cspin_lock(&l->lock);
   
-  /* Wait for readers to finish */
+  // let readers finish
   while (atomic_read(&l->readers)) cpu_relax();
-}
-static void custom_init(custom_rwlock *l){
-atomic_set(&l->readers,0);
 }
 static void custom_wrunlock(custom_rwlock *l)
 {
+  // just unset the lock
   cspin_unlock(&l->lock);
 }
 
+static void custom_init(custom_rwlock *l)
+{
+  atomic_set(&l->readers,0);
+}
 
 static void custom_rdlock(custom_rwlock *l)
 {
   while (1)
   {
-    /* Speculatively take read lock */
+    // take read lock
     atomic_inc(&l->readers);
     
-    /* Success? */
+    // if Success? then return (i.e. if not locked for writing)
     if (!l->lock) return;
     
-    /* Failure - undo, and wait until we can try again */
+    // if Failure - undo the reader, and wait until writer unlocks
     atomic_dec(&l->readers);
     while (l->lock) cpu_relax();
   }
@@ -87,11 +90,6 @@ static void custom_rdunlock(custom_rwlock *l)
 {
   atomic_dec(&l->readers);
 }
-
-
-
-
-
 
 
 struct data{

@@ -25,6 +25,7 @@ def plot(l, mean, sd):
 
 
 # Compile module!
+call(["cd ../src"], shell=True)
 call(["make"], shell=True)
 call(["rmmod syncdev"], shell=True)
 call(["insmod module/syncdev.ko"], shell=True)

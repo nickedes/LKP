@@ -2,6 +2,7 @@ from json import *
 import matplotlib.pyplot as plt
 from subprocess import call
 from time import time, sleep
+from os import chdir
 
 
 def plot(l, mean, sd):
@@ -19,62 +20,28 @@ def plot(l, mean, sd):
     plt.ylabel('Average Time taken (in secs) --->')
     plt.xlabel('Locks --->')
     plt.errorbar(l, mean, sd, linestyle='None', marker='o')
-    plt.savefig("stats.png")   # save the figure to file
+    plt.savefig("../run/stats.png")   # save the figure to file
     plt.show()
     plt.close()
 
 
-def compareLocks(results):
-    """
-        Compare the time taken by each lock 
-    """
-    fig, (ax, ax2) = plt.subplots(2, sharex=True)
-    # plot the same data on both axes
-    ax.plot(list(results["RCU"].keys()), list(
-        results["RCU"].values()), marker="o")
-    legends = []
+# Compile module!
+chdir("../src")
+call(["make"], shell=True)
+call(["rmmod syncdev"], shell=True)
+call(["insmod module/syncdev.ko"], shell=True)
+call(["mknod /dev/syncdev c 247 0"], shell=True)
 
-    for lock in results:
-        if lock != "RCU":
-            legends.append(lock)
-            ax2.plot(list(results[lock].keys()), list(
-                results[lock].values()), marker="o")
-
-    print(legends)
-    limit_from, limit_to = min(results["RCU"].values()), max(
-        results["RCU"].values())
-
-    # zoom-in / limit the view to different portions of the data
-    ax.set_ylim(limit_from, limit_to+500)
-    ax2.set_ylim(100, 111)  # most of the data
-
-    # hide the spines between ax and ax2
-    # ax.spines['bottom'].set_visible(False)
-    ax2.spines['top'].set_visible(False)
-
-    # Make the spacing between the two axes a bit smaller
-    plt.subplots_adjust(wspace=0.15)
-    plt.xlabel('Percentage of read operations --->')
-    plt.ylabel('Time taken (in secs) --->')
-    ax.legend(["RCU"], loc='upper right', fontsize='small')
-    ax2.legend(legends, loc='upper right', fontsize='small')
-    plt.savefig("Locks-Comparison-graph.png")   # save the figure to file
-    plt.show()
-    plt.close()
-
-
-locks = {"SPINLOCK": 1, "RWLOCK": 2,
-         "SEQLOCK": 3, "RCU": 4, "RWLOCK_CUSTOM": 5}
+locks = {"SPINLOCK": 1, "RWLOCK": 2, "SEQLOCK": 3, "RCU": 4, "RWLOCK_CUSTOM": 5}
 
 numthreads = 10
 ops_per_thread = 5000000
+readops = [99, 96, 93, 90, 87, 84, 80, 77, 74, 70]
 
 results = {}
 
 for lock in locks:
-    results[lock] = {}
-
-for lock in locks:
+  results[lock] = {}
   print("Lock - " + lock)
   changelock = "echo "+ str(locks[lock]) +" > /sys/kernel/asg2_lock"
   print(changelock)
@@ -87,17 +54,13 @@ for lock in locks:
       call([benchmarkCmd], shell=True)
       end = time()
       results[lock][readop] = end - start
-      with open('data.json', 'w') as fp:
-          dump(results, fp, sort_keys=True, indent=4)
 
 # all results stored here!
-with open('data.json', 'w') as fp:
+with open('../run/data.json', 'w') as fp:
   dump(results, fp, sort_keys=True, indent=4)
 
-# Get saved results
-
-with open('data.json', 'r') as fp:
-    results = load(fp)
+with open('../run/data.json', 'r') as fp:
+  results = load(fp)
 
 mean = [0]*(len(locks)+1)
 sd = [0]*(len(locks)+1)
@@ -132,12 +95,11 @@ for lock in results:
     plt.plot(percent_readops, times, marker="o")
     legends.append(lock)
 
-plt.legend(legends, loc='upper right', fontsize='small')
-plt.savefig("Locks-Comparison-graph.png")   # save the figure to file
+plt.legend(legends, loc='upper left', fontsize='small')
+plt.savefig("../run/Locks-Comparison-graph.png")   # save the figure to file
 plt.show()
 plt.close()
 
-compareLocks(results)
 
 for lock in results:
     # observations for a lock and different percentage of read ops
@@ -147,7 +109,7 @@ for lock in results:
     plt.xlabel('Percentage of read operations --->')
     plt.ylabel('Time taken (in secs) --->')
     plt.title("Plot for " + lock)
-    plt.savefig(lock + "-graph.png")   # save the figure to file
+    plt.savefig("../run/" + lock + "-graph.png")   # save the figure to file
     plt.show()
     plt.close()
 

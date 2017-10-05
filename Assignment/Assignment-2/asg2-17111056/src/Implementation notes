@@ -1,0 +1,46 @@
+Locks :
+
+For Spin lock, Sequential lock, RW Lock, RCU:
+	Using Linux Kernel API
+
+For Custom RW Lock:
+	1. Created a custom spinlock used for locking and unlocking. (Described below)
+	2. An atomic variable for no. of readers
+
+	Custom spin lock :
+		It uses XCHG (Exchange) for implementation of spin lock.
+
+	Write locking procedure : 
+		Gets a spinlock, and then waits for readers to finish. After that write can start.	
+	Write unlocking procedure : 
+		Unset lock
+
+	Read lock procedure :
+		Allow multiple readers to enter increase the no. of readers, if it is locked then undo this increase and wait till the time writer unlocks it.
+	Read unlock procedure:
+		Just decrease the count of readers.
+
+How to run Code :
+	
+	NOTE : You would need to install matplotlib python library to run analysis-test.py to see plots. Do this : sudo apt-get install python3-matplotlib
+	then run the script.
+	
+	If only want to run unit tests and analysis tests, then run:
+	
+	cd run/
+	python3 unit-test.py
+	python3 analysis-test.py
+
+
+	Otherwise : 
+
+	cd src
+	sudo su
+	make
+	insmod module/syncdev.ko
+	mknod /dev/syncdev c 247 0
+	echo 3 > /sys/kernel/asg2_lock
+
+	# run benchmarks
+	
+	./syncbench 1 5000000 99 1
