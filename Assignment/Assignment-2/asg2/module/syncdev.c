@@ -128,7 +128,6 @@ struct cs_handler{
                               spinlock_t spin;
                               rwlock_t rwlock;
                               seqlock_t seqlock;
-                              struct rcu_head rcu;
                               custom_rwlock crwlock; /*Add your custom lock type here*/
                               
                      };
@@ -456,8 +455,6 @@ int rculock_init_cs(struct data *gd)
 
 int rculock_cleanup_cs(struct data *gd)
 {
-    struct cs_handler *handler = gd->handler;
-    destroy_rcu_head(&handler->rcu);
     return 0;
 }
 
@@ -470,12 +467,12 @@ int rculock_write_data(struct data *gd)
   new_gd = kmalloc(sizeof(*new_gd), GFP_KERNEL);
 
   spin_lock(&handler->spin);
-  old_gd = rcu_dereference(gdata);
+  old_gd = rcu_dereference_protected(gdata, lockdep_is_held(&handler->spin));
   *new_gd = *old_gd;
   handler->mustcall_write(new_gd);  /*Call the Write CS*/
   rcu_assign_pointer(gdata, new_gd);
-  spin_unlock(&handler->spin);
   call_rcu(&old_gd->rcu, gd_reclaim);
+  spin_unlock(&handler->spin);
   // synchronize_rcu();
   // kfree(old_gd);
   return 0;
